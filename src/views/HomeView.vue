@@ -3,7 +3,12 @@
 </script>
 
 <template>
-  <v-container>
-    Siemanko
-  </v-container>
+  
 </template>
+
+<style scoped style="scss">
+.homeview__infocard {
+  margin-top: 20px;
+  text-align: center;
+}
+</style>
