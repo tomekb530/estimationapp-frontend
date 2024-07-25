@@ -1,9 +1,5 @@
-<script setup lang="ts">
-
-</script>
-
 <template>
-  <v-container class="homeview__infocard">
+  <v-container class="aboutview__infocard">
     <v-row>
       <v-col cols="12">
         <v-card>
@@ -18,8 +14,12 @@
   </v-container>
 </template>
 
+<script setup lang="ts">
+
+</script>
+
 <style scoped style="scss">
-.homeview__infocard {
+.aboutview__infocard {
   margin-top: 20px;
   text-align: center;
 }

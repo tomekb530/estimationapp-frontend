@@ -1,35 +1,41 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import axios from 'axios'
-axios.defaults.withCredentials = true
-axios.defaults.withXSRFToken = true
-axios.defaults.headers.common['Accept'] = 'application/json'
+import { get, post } from '@/util/backendHelper'
+
 export const useAccountStore = defineStore('account', () => {
-    const usernameData = ref('')
-    const roleData = ref('')
-    const tokenData = ref('')
-    const isAuthenticated = computed(() => tokenData.value !== '')
+    const userData = ref({})
+    const isAuthenticated = computed(() => Object.keys(userData.value).length > 0)
+
+    async function checkAuth() {
+        const response = await get("/api/me")
+        if (response.status === 200) {
+            userData.value = response.data
+        }
+    }
+
     async function login(email: string, password: string) {
-        await axios.get("http://localhost:8000/sanctum/csrf-cookie")
-        const response = await axios.post("http://localhost:8000/login", {
+        await get("/sanctum/csrf-cookie")
+        const response = await post("/login", {
             email,
             password
         })
-        console.log(response);
-        
-    }
-    function logout() {
-        usernameData.value = ''
-        roleData.value = ''
-        tokenData.value = ''
+        checkAuth()
     }
 
-    function register(email: string, password: string, password_confirmation: string) {
-        axios.post("http://localhost:8000/register", {
+    async function register(email: string, password: string, password_confirmation: string, name: string) {
+        await get("/sanctum/csrf-cookie")
+        await post("/register", {
             email,
             password,
-            password_confirmation
+            password_confirmation,
+            name
         })
     }
-    return { usernameData, roleData, tokenData, isAuthenticated, login, logout }
+
+    async function logout() {
+        await post("/logout",{})
+        userData.value = {}
+    }
+
+    return { userData, isAuthenticated, login, logout, register, checkAuth}
 })

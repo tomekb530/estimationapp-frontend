@@ -12,13 +12,22 @@
     </v-app-bar>
     <v-navigation-drawer v-model="drawerOpen">
       <v-list>
-        <v-list-item link v-for="(route, index) in router.options.routes" :key="index">
+        <v-list-item link v-for="(route, index) in getAccessableRoutes()" :key="index">
           <v-list-item-title @click="router.push(route.path)">{{ route.name }}</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
     <v-main class="d-flex" style="min-height: 300px;">
-      <RouterView/>      
+      <v-container>
+        <v-row class="text-center">
+        <v-col cols="12">
+          <v-card>
+            <v-card-title> {{ $route.name }} </v-card-title>
+          </v-card>
+        </v-col>
+        </v-row>
+        <RouterView/>
+      </v-container>      
     </v-main>
   </v-app>
 </template>
@@ -30,7 +39,19 @@ import  AccountView  from './components/AccountView.vue'
 import { useAccountStore } from './stores/account';
 const accountStore = useAccountStore();
 const router = useRouter()
-const drawerOpen = ref(false)
+const drawerOpen = ref(true)
+
+function getAccessableRoutes(){
+  return router.options.routes.filter(route => {
+    if(route.meta && route.meta.roles){
+      const roles = route.meta.roles as string[]
+      return roles.includes(accountStore.userData.role) && route.name !== 'none'
+    }
+    return true
+  })
+
+}
+
 </script>
 
 
