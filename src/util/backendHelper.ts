@@ -4,6 +4,8 @@ axios.defaults.withXSRFToken = true;
 axios.defaults.headers.common['Accept'] = 'application/json';
 const baseURL = 'http://localhost:8000';
 
+import type { User } from '@/types/User';
+
 export const get = async (url: string) => {
     return await axios.get(baseURL + url)
 }

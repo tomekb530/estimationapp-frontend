@@ -43,6 +43,10 @@ const register = async () => {
         model.value = false;
         toast.success("Zarejestrowano!");
         emit('success');
+        email.value = '';
+        password.value = '';
+        password2.value = '';
+        name.value = '';
     }catch(e: any){
         const errors = e.response.data.errors;
         if(errors){

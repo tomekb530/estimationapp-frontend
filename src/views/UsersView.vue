@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/valid-v-slot -->
 <template>
   <div>
     <v-container>
@@ -28,20 +29,26 @@
       </v-row>      
     </v-container>
     <ConfirmationDialog v-model="dialogShow" :info="dialogInfo" :message="dialogMessage" :cancel="dialogCancel" :confirm="dialogConfirm" :confirmBtnColor="'red'" @confirm="deleteConfirmed"/>
+    <ModifyUserDialog v-model="modifyUserDialog" :action="modifyAction" :user="userToModify" @success="getUsers"/>
   </div>
 </template>
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue'
-  import {get, post, remove} from '@/util/backendHelper';
+  import {get, remove} from '@/util/backendHelper';
   import { useToast } from "vue-toastification";
   import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+  import ModifyUserDialog from '@/components/ModifyUserDialog.vue';
+import type { User } from '@/types/User';
   const dialogShow = ref(false);
   const dialogInfo = ref('');
   const dialogMessage = ref('');
   const dialogCancel = ref('');
   const dialogConfirm = ref('');
   const userToDelete = ref(null);
+  const modifyUserDialog = ref(false);
+  const modifyAction = ref('add');
+  const userToModify = ref(null);
   const actionInProgress = ref(false);
 
   const toast = useToast();
@@ -52,12 +59,13 @@
     return new Date(date).toLocaleString();
   }
 
-
   const headers = [
     { title: 'ID', key: 'id' },
     { title: 'Nazwa', key: 'name' },
     { title: 'Email', key: 'email' },
-    { title: 'Data utworzenia', key: 'created_at', value: item => parseDate(item.created_at) },
+    { title: 'Rola', key: 'role' },
+    { title: 'Zweryfikowany Email', key: 'email_verified', value: (item: { email_verified_at: Date; }) => item.email_verified_at !== null ? 'Tak' : 'Nie' },
+    { title: 'Data utworzenia', key: 'created_at', value: (item: { created_at: string; }) => parseDate(item.created_at) },
     { title: 'Akcje', key: 'actions', sortable: false }
   ];
   const getUsers = async () => {
@@ -72,8 +80,16 @@
     }
   }
 
+  const addUser = () => {
+    modifyAction.value = 'add';
+    userToModify.value = null;
+    modifyUserDialog.value = true;
+  }
+
   const editMode = (item: any) => {
-    console.log(id);
+    modifyAction.value = 'edit';
+    userToModify.value = item;
+    modifyUserDialog.value = true;
   }
 
   const deleteUser = (item: any) => {
@@ -87,10 +103,10 @@
     actionInProgress.value = true;
     if(userToDelete.value){
       try{
-        await remove(`/api/users/${userToDelete.value.id}`);
+        await remove(`/api/users/${(userToDelete.value as any).id}`);
         toast.success("Użytkownik został usunięty");
         dialogShow.value = false;
-        users.value = users.value.filter((user: any) => user.id !== userToDelete.value.id);
+        users.value = users.value.filter((user: User) => userToDelete.value && (user as User).id !== (userToDelete.value as User).id);
       }catch(e: any){
         console.error(e);
         toast.error("Wystąpił błąd podczas usuwania użytkownika: " + e.response.data.message);

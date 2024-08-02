@@ -7,7 +7,7 @@
         >
         <template v-slot:activator="{ props }">
             <v-btn v-if="accountStore.isAuthenticated" v-bind="props">
-            {{ accountStore.userData.name }}
+            {{ accountStore.userData && accountStore.userData.name }}
             </v-btn>
             <v-btn v-else @click="logindialog = !logindialog">
             Zaloguj
@@ -17,10 +17,17 @@
         <v-card min-width="300">
             <v-list>
             <v-list-item
-                :title="accountStore.userData.name"
-                :subtitle="accountStore.userData.role"
+                :title="(accountStore.userData as User).name"
+                :subtitle="(accountStore.userData as User).role"
             >
             </v-list-item>
+            <v-list-item
+                v-if="(accountStore.userData as User).email_verified_at === null"
+                @click="sendEmailVerification()"
+                :title="'Masz niezweryfikowany email'"
+                :subtitle="'Kliknij aby wysłać email weryfikacyjny'"
+                class="pointer text-red"
+            ></v-list-item>
             </v-list>
 
             <v-divider></v-divider>
@@ -54,6 +61,8 @@ import { useAccountStore } from '@/stores/account';
 import LoginDialog from './LoginDialog.vue';
 import { useToast } from "vue-toastification";
 import { useRouter } from 'vue-router';
+import { post } from '@/util/backendHelper';
+import type { User } from '@/types/User';
 const toast = useToast();
 const accountStore = useAccountStore();
 const menu = ref(false);
@@ -61,12 +70,22 @@ const router = useRouter();
 const logindialog = ref(false);
 const logout = async () => {
     try{
-        await accountStore.logout();
         menu.value = false;
+        await accountStore.logout();
         toast.success("Wylogowano");
         router.push('/');
     }catch(e: any){
         console.error(e);
     }
 }
+
+const sendEmailVerification = async () => {
+    try{
+        await post('/email/verification-notification',{});
+        toast.success("Wysłano email weryfikacyjny");
+    }catch(e: any){
+        toast.error(e.response.data.message);
+    }
+}
+
 </script>

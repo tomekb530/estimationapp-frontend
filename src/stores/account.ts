@@ -1,10 +1,11 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { get, post } from '@/util/backendHelper'
+import type { User } from '@/types/User'
 
 export const useAccountStore = defineStore('account', () => {
-    const userData = ref({})
-    const isAuthenticated = computed(() => Object.keys(userData.value).length > 0)
+    const userData = ref<User>()
+    const isAuthenticated = computed(() => userData.value && Object.keys(userData.value).length > 0)
 
     async function checkAuth() {
         const response = await get("/api/me")
@@ -19,7 +20,7 @@ export const useAccountStore = defineStore('account', () => {
             email,
             password
         })
-        checkAuth()
+        await checkAuth()
     }
 
     async function register(email: string, password: string, password_confirmation: string, name: string) {
@@ -32,10 +33,25 @@ export const useAccountStore = defineStore('account', () => {
         })
     }
 
-    async function logout() {
-        await post("/logout",{})
-        userData.value = {}
+    async function forgotPassword(email: string) {
+        await post("/forgot-password", {
+            email
+        })
     }
 
-    return { userData, isAuthenticated, login, logout, register, checkAuth}
+    async function resetPassword(email: string, token: string, password: string, password_confirmation: string) {
+        await post("/reset-password", {
+            email,
+            token,
+            password,
+            password_confirmation
+        })
+    }
+
+    async function logout() {
+        await post("/logout",{})
+        userData.value = undefined;
+    }
+
+    return { userData, isAuthenticated, login, logout, register, checkAuth, forgotPassword, resetPassword}
 })

@@ -10,7 +10,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import '@mdi/font/css/materialdesignicons.css'
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
-import { useAccountStore } from './stores/account'
+
 const app = createApp(App)
 const vuetify = createVuetify({
     components, directives, 
@@ -30,7 +30,5 @@ const vuetify = createVuetify({
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
-app.use(Toast, {});
+app.use(Toast, {})
 app.mount('#app')
-const accountStore = useAccountStore()
-accountStore.checkAuth()

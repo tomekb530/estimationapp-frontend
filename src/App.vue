@@ -7,7 +7,7 @@
       <v-toolbar-title>Estimation App</v-toolbar-title>
       <v-spacer></v-spacer>
       <template v-slot:append>
-        <AccountView/>
+        <AccountPanel/>
       </template>
     </v-app-bar>
     <v-navigation-drawer v-model="drawerOpen">
@@ -35,17 +35,20 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
 import { ref } from 'vue'
-import  AccountView  from './components/AccountView.vue'
 import { useAccountStore } from './stores/account';
+import AccountPanel from './components/AccountPanel.vue';
 const accountStore = useAccountStore();
 const router = useRouter()
 const drawerOpen = ref(true)
 
 function getAccessableRoutes(){
   return router.options.routes.filter(route => {
+    if(route.meta && route.meta.dontshow){
+      return false
+    }
     if(route.meta && route.meta.roles){
       const roles = route.meta.roles as string[]
-      return roles.includes(accountStore.userData.role) && route.name !== 'none'
+      return accountStore.userData && roles.includes(accountStore.userData.role)
     }
     return true
   })
