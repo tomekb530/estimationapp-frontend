@@ -26,7 +26,11 @@
           </v-card>
         </v-col>
         </v-row>
-        <RouterView/>
+        <router-view v-slot="{ Component, route }">
+          <transition :name="route.meta.transition">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </v-container>      
     </v-main>
   </v-app>

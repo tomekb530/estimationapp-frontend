@@ -31,6 +31,14 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/clients',
+      name: 'Klienci',
+      component: () => import('../views/ClientsView.vue'),
+      meta: {
+        roles: ['superadmin', 'admin']
+      }
+    },
+    {
       path: '/about',
       name: 'O Aplikacji',
       component: () => import('../views/AboutView.vue')
@@ -56,13 +64,7 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const accountStore = useAccountStore()
-  if (!accountStore.isAuthenticated) {
-    try{
-      await accountStore.checkAuth()
-    }catch(e){
-      //toast.error("Nie jesteś zalogowany");
-    }
-  }
+  
   if (to.name === "Weryfikacja Email") {
     const req = to.fullPath
     try{
@@ -78,7 +80,6 @@ router.beforeEach(async (to, from, next) => {
       next({ name: 'Strona Główna' })
     }
   }
-
 
   if (to.matched.some(record => record.meta.roles)) {
     if (!accountStore.isAuthenticated) {

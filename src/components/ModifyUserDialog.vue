@@ -8,12 +8,7 @@
                 <v-text-field v-model="email" label="Email"></v-text-field>
                 <v-text-field v-model="password" label="Hasło" type="password" v-if="props.action == 'add'"></v-text-field>
                 <v-select v-model="role" :items="Object.values(Role)" label="Rola"></v-select>
-                <v-btn type="submit" color="primary">
-                    <template v-if="actionInProgress">
-                        <v-progress-circular indeterminate></v-progress-circular>
-                    </template>
-                    <template v-else>{{ props.action == 'edit' ? "Edytuj" : "Dodaj"}}</template>
-                </v-btn>
+                <v-btn type="submit" color="primary" :loading="actionInProgress">{{ props.action == 'edit' ? "Zapisz" : "Dodaj" }}</v-btn>
             </v-form>
         </v-card-text>
     </v-card>
