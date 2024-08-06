@@ -8,6 +8,12 @@
               <v-card-text>
                 <v-btn class="clientsview__actionbutton" color="primary" @click="addUser">Dodaj Klienta</v-btn>
                 <v-btn class="clientsview__actionbutton" color="primary" @click="getClients">Odśwież</v-btn>
+                <v-card class="mt-5">
+                  <v-card-title>Filtruj po dacie dodania</v-card-title>
+                  <DateSelector v-model="filterDateFrom">{{ filterDateFrom ? "Od: " + new Date(filterDateFrom).toLocaleString([],{year: 'numeric', month: 'numeric', day: 'numeric'}) : "Wybierz date od:"}}</DateSelector>
+                  <DateSelector v-model="filterDateTo">{{ filterDateTo ? "Do: " + new Date(filterDateTo).toLocaleString([],{year: 'numeric', month: 'numeric', day: 'numeric'}) : "Wybierz date do:"}}</DateSelector>
+                  <v-btn class="ml-5 mb-3" color="primary" @click="filterDateFrom = undefined; filterDateTo = undefined">Wyczyść filtr</v-btn>
+                </v-card>
               </v-card-text>
             </v-card>
           </v-col>
@@ -38,14 +44,15 @@
   </template>
   
   <script setup lang="ts">
-    import { onMounted, ref } from 'vue'
+    import { onMounted, ref, watch } from 'vue';
     import {imagesURL, get, remove} from '@/util/backendHelper';
     import { useToast } from "vue-toastification";
     import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
-    import type { User } from '@/types/User';
     import ModifyClientDialog from '@/components/ModifyClientDialog.vue';
     import type { Client } from '@/types/Client';
     import ImageDialog from '@/components/ImageDialog.vue';
+    import DateSelector from '@/components/DateSelector.vue';
+
     const dialogShow = ref(false);
     const dialogInfo = ref('');
     const dialogMessage = ref('');
@@ -57,17 +64,18 @@
     const clientToModify = ref(null);
     const actionInProgress = ref(false);
     const imageDialog = ref(false);
+    const filterDateFrom = ref<Date | undefined>(undefined);
+    const filterDateTo =  ref<Date | undefined>(undefined);
     const imageToShow = ref('');
     const showImage = (image: string) => {
       imageToShow.value = image;
       imageDialog.value = true;
     }
-
-
   
     const toast = useToast();
     
     const clients = ref<Client[]>([]);
+    const allClients = ref<Client[]>([]);
   
     const parseDate = (date: string) => {
       return new Date(date).toLocaleString();
@@ -82,23 +90,60 @@
       { title: 'Nazwa', key: 'name' },
       { title: 'Email', key: 'email' },
       { title: 'Opis', key: 'description' },
-      { title: 'Kraj', key: 'country', value: (item: { country: string; }) => new Intl.DisplayNames(['pl'], { type: 'region' }).of(item.country) },
+      { title: 'Kraj', key: 'country', value: (item: { country: string; }) => parseCountry(item.country) },
       { title: 'Logo', key: 'logo', sortable: false},
       { title: 'Data utworzenia', key: 'created_at', value: (item: { created_at: string; }) => parseDate(item.created_at) },
+      { title: 'Data modyfikacji', key: 'updated_at', value: (item: { updated_at: string; }) => parseDate(item.updated_at) },
       { title: 'Akcje', key: 'actions', sortable: false }
     ];
     const getClients = async () => {
+      allClients.value = [];
       clients.value = [];
       try{
         const response = await get('/api/clients');
         clients.value = response.data;
-        console.log(clients.value);
+        allClients.value = response.data;
       }catch(e: any){
         console.error(e);
         toast.error("Wystąpił błąd podczas pobierania danych");
       }
     }
   
+    watch(filterDateFrom, async (newVal) => {
+      if(newVal){
+        newVal = newVal as Date;
+        newVal.setHours(0, 0, 0, 0);
+        clients.value = allClients.value.filter((client: Client) => {
+          if(newVal && client.created_at){
+            if(filterDateTo.value){
+              return new Date(client.created_at) >= newVal && new Date(client.created_at) <= filterDateTo.value;
+            }
+            return new Date(client.created_at) >= newVal;
+          }
+          return true;
+        });
+      }else{
+        clients.value = allClients.value;
+      }
+    })
+
+    watch(filterDateTo, async (newVal) => {
+      if(newVal){
+        newVal = newVal as Date;
+        newVal.setHours(23, 59, 59, 999);
+        clients.value = allClients.value.filter((client: Client) => {
+          if(newVal && client.created_at){
+            if(filterDateFrom.value){
+              return new Date(client.created_at) <= newVal && new Date(client.created_at) >= filterDateFrom.value;
+            }
+            return new Date(client.created_at) <= newVal;
+          }
+          return true;
+        });
+      }else{
+        clients.value = allClients.value;
+      }
+    })
     const addUser = () => {
       modifyAction.value = 'add';
       clientToModify.value = null;
