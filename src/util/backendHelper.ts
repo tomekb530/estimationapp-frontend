@@ -39,4 +39,4 @@ export const patch = async (url: string, data: any) => {
     return await axios.patch(baseURL + url, data)
 }
 
-window.backendHelper = { get, post, put, remove, patch }
+//window.backendHelper = { get, post, put, remove, patch }
