@@ -55,7 +55,7 @@ const login = async () => {
 
 </script>
 
-<style scoped style="scss">
+<style scoped lang="scss">
 .logindialog__buttons {
     display: flex;
     justify-content: space-between;

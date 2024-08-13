@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAccountStore } from '@/stores/account'
-import { get } from '@/util/backendHelper'
 import { useToast } from 'vue-toastification'
 const toast = useToast()
 
@@ -39,6 +38,22 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/estimations',
+      name: 'Wyceny',
+      component: () => import('../views/EstimationsView.vue'),
+      meta: {
+        roles: ['superadmin', 'admin']
+      }
+    },
+    {
+      path: '/admin/projects',
+      name: 'Projekty',
+      component: () => import('../views/ProjectsView.vue'),
+      meta: {
+        roles: ['superadmin', 'admin']
+      }
+    },
+    {
       path: '/about',
       name: 'O Aplikacji',
       component: () => import('../views/AboutView.vue')
@@ -68,10 +83,8 @@ router.beforeEach(async (to, from, next) => {
   if (to.name === "Weryfikacja Email") {
     const req = to.fullPath
     try{
-      const response = await get(req)
-      if(response.status === 204){
-        toast.success("Adres email został zweryfikowany")
-      }
+      await accountStore.verifyEmail(req)
+      toast.success("Adres email został zweryfikowany")
     }
     catch(e: any){
       toast.error("Nie udało się zweryfikować adresu email: " + e.response.data.message)

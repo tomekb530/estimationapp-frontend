@@ -6,7 +6,7 @@
                 <v-form @submit.prevent="edit">
                     <v-text-field v-model="name" label="Nazwa"></v-text-field>
                     <v-text-field v-model="email" label="Email"></v-text-field>
-                    <v-text-field v-model="description" label="Opis"></v-text-field>
+                    <v-textarea v-model="description" :clearable="true" label="Opis"></v-textarea>
                     <v-select v-model="country" :items="countriesList" label="Kraj"></v-select>
                     <v-file-input v-model="logo" label="Logo" accept="image/*"></v-file-input>
                     <v-btn type="submit" color="primary" :loading="actionInProgress">{{ props.action == 'edit' ? "Zapisz" : "Dodaj" }}</v-btn>
@@ -20,8 +20,8 @@
 import { countries } from 'countries-list'
 import type { Client } from '@/types/Client';
 import { ref, watch } from 'vue'
-import { post, put } from '@/util/backendHelper';
 import { useToast } from 'vue-toastification';
+import { useClientStore } from '@/stores/clients';
 const toast = useToast();
 const model = defineModel<boolean>();
 const name = ref('');
@@ -30,6 +30,9 @@ const description = ref('');
 const country = ref('');
 const logo = ref<File | null>(null);
 const actionInProgress = ref(false);
+const clientStore = useClientStore();
+
+
 const countriesList = Object.keys(countries).map((key) => {
     return {
         title: new Intl.DisplayNames(['pl'], { type: 'region' }).of(key),
@@ -53,35 +56,10 @@ async function edit(){
     actionInProgress.value = true;
     try{
         if(props.action === 'edit'){
-            if (logo.value === null) {
-                await put(`/api/clients/${props.client!.id}`, {
-                    name: name.value,
-                    email: email.value,
-                    description: description.value,
-                    country: country.value,
-                });
-            } else {
-                const formData = new FormData();
-                formData.append('name', name.value);
-                formData.append('email', email.value);
-                formData.append('description', description.value);
-                formData.append('country', country.value);
-                formData.append('logo', logo.value);
-                await put(`/api/clients/${props.client!.id}`, formData);
-            }   
+            await clientStore.updateClient(props.client!.id, name.value, email.value, description.value, country.value, logo.value!);
             toast.success('Klient został zaktualizowany');
         }else{
-            if(logo.value === null){
-                toast.error("Logo jest wymagane");
-                return;
-            }
-            const formData = new FormData();
-            formData.append('name', name.value);
-            formData.append('email', email.value);
-            formData.append('description', description.value);
-            formData.append('country', country.value);
-            formData.append('logo', logo.value);
-            await post('/api/clients', formData);
+            await clientStore.createClient(name.value, email.value, description.value, country.value, logo.value!);
             toast.success('Klient został utworzony');
         }
         model.value = false;

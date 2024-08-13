@@ -6,8 +6,8 @@
           <v-col cols="12">
             <v-card>
               <v-card-text>
-                <v-btn class="clientsview__actionbutton" color="primary" @click="addUser">Dodaj Klienta</v-btn>
-                <v-btn class="clientsview__actionbutton" color="primary" @click="getItems">Odśwież</v-btn>
+                <v-btn class="itemsview__actionbutton" color="primary" @click="addItem">Dodaj Projekt</v-btn>
+                <v-btn class="itemsview__actionbutton" color="primary" @click="getItems">Odśwież</v-btn>
                 <v-card class="mt-5">
                   <v-card-title>Filtruj po dacie dodania</v-card-title>
                   <DateSelector v-model="filterDateFrom">{{ filterDateFrom ? "Od: " + new Date(filterDateFrom).toLocaleString([],{year: 'numeric', month: 'numeric', day: 'numeric'}) : "Wybierz date od:"}}</DateSelector>
@@ -27,13 +27,12 @@
               <template v-slot:item.id="{ index }">
                 {{ index + 1 }}
               </template>
+              <template v-slot:item.estimations="{ item }">
+                {{ useEstimationStore().estimations.filter((estimation) => estimation.project_id === item.id).reduce((acc, estimation) => acc + calcFullPrice(estimation), 0) + " zł" }}              </template>
               <template v-slot:item.actions="{ item }">
-                <v-btn class="clientsview__actionbutton" color="primary" @click="viewItem(item)">Szczegóły</v-btn>
-                <v-btn class="clientsview__actionbutton" color="primary" @click="editMode(item)">Edytuj</v-btn>
-                <v-btn class="clientsview__actionbutton" color="error" @click="deleteUser(item)">Usuń</v-btn>
-              </template>
-              <template v-slot:item.logo="{ item }">
-                <v-img class="clientsview__logoimage" :src="imagesURL+((item as Client).logo as string)" width="50" height="50" :alt="'Logo '+item.name" @click="showImage(imagesURL+((item as Client).logo as string))"></v-img>
+                <v-btn class="itemsview__actionbutton" color="primary" @click="viewItem(item)">Szczegóły</v-btn>
+                <v-btn class="itemsview__actionbutton" color="primary" @click="editItem(item)">Edytuj</v-btn>
+                <v-btn class="itemsview__actionbutton" color="error" @click="deleteItem(item)">Usuń</v-btn>
               </template>
               <template v-slot:no-data>
                 <v-alert :value="true" icon="mdi-alert">
@@ -45,88 +44,81 @@
         </v-row>      
       </v-container>
       <ConfirmationDialog v-model="dialogShow" :info="dialogInfo" :message="dialogMessage" :cancel="dialogCancel" :confirm="dialogConfirm" :confirmBtnColor="'red'" @confirm="deleteConfirmed"/>
-      <ModifyClientDialog v-model="modifyClientDialog" :action="modifyAction" :client="selectedItem" @success="getItems"/>
-      <ImageDialog v-model="imageDialog" :image="imageToShow"/>
+      <ModifyProjectDialog v-model="modifyItemDialog" :action="modifyAction" :project="selectedItem" @success="projectStore.fetchProjects"/>
       <DescriptionDialog v-model="descriptionDialog" :headers="headers" :data="selectedItem"/>
     </div>
   </template>
   
   <script setup lang="ts">
     import { onMounted, ref, watch } from 'vue';
-    import {imagesURL, get, remove} from '@/util/backendHelper';
     import { useToast } from "vue-toastification";
     import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
-    import ModifyClientDialog from '@/components/ModifyClientDialog.vue';
-    import type { Client } from '@/types/Client';
-    import ImageDialog from '@/components/ImageDialog.vue';
     import DateSelector from '@/components/DateSelector.vue';
-    import { parseDate, parseCountry } from '@/util/utilFuncs';
+    import ModifyProjectDialog from '@/components/ModifyProjectDialog.vue';
+    import type { Project } from '@/types/Project';
     import DescriptionDialog from '@/components/DescriptionDialog.vue';
-    import { useClientStore } from '@/stores/clients';
+    import { useProjectStore } from '@/stores/projects';
+    import { calcFullPrice, parseDate } from '@/util/utilFuncs';
+    import { useEstimationStore } from '@/stores/estimations';
 
-
+    
     const dialogShow = ref(false);
     const dialogInfo = ref('');
     const dialogMessage = ref('');
     const dialogCancel = ref('');
     const dialogConfirm = ref('');
-    const descriptionDialog = ref(false);
 
-    const selectedItem = ref<Client | null>(null);
-
-    const modifyClientDialog = ref(false);
+    const modifyItemDialog = ref(false);
     const modifyAction = ref('add');
 
+    const descriptionDialog = ref(false);
+
+    const selectedItem = ref<Project | null>(null);
+
     const actionInProgress = ref(false);
-    const imageDialog = ref(false);
+
     const filterDateFrom = ref<Date | undefined>(undefined);
     const filterDateTo =  ref<Date | undefined>(undefined);
-    const imageToShow = ref('');
-    const showImage = (image: string) => {
-      imageToShow.value = image;
-      imageDialog.value = true;
-    }
-  
-    const toast = useToast();
-    const clientStore = useClientStore();
-    const dataFiltered = ref<Client[]>([]);
 
-  
+    const toast = useToast();
+    const projectStore = useProjectStore();
+    const dataFiltered = ref<Project[]>([]);
+
     const headers = [
       { title: 'ID', key: 'id' },
       { title: 'Nazwa', key: 'name' },
-      { title: 'Email', key: 'email' },
       { title: 'Opis', key: 'description', value: (item: { description:string; }) => item.description.substring(0, 50) + (item.description.length > 50 ? '...' : '') },
-      { title: 'Kraj', key: 'country', value: (item: { country: string; }) => parseCountry(item.country) },
-      { title: 'Logo', key: 'logo', sortable: false},
+      { title: 'Suma wycen', key: 'estimations'},
       { title: 'Data utworzenia', key: 'created_at', value: (item: { created_at: string; }) => parseDate(item.created_at) },
       { title: 'Data modyfikacji', key: 'updated_at', value: (item: { updated_at: string; }) => parseDate(item.updated_at) },
       { title: 'Akcje', key: 'actions', sortable: false }
     ];
-    const getItems = async () => {
-      await clientStore.fetchClients();
-      dataFiltered.value = clientStore.clients;
-    }
   
+    const getItems = async () => {
+      await projectStore.fetchProjects();
+      dataFiltered.value = projectStore.projects;
+    }
+    
     const viewItem = (item: any) => {
       selectedItem.value = item;
       descriptionDialog.value = true;
     }
 
-    const addUser = () => {
+    const addItem = () => {
       modifyAction.value = 'add';
       selectedItem.value = null;
-      modifyClientDialog.value = true;
+      modifyItemDialog.value = true;
     }
   
-    const editMode = (item: any) => {
+    const editItem = (item: any) => {
       modifyAction.value = 'edit';
       selectedItem.value = item;
-      modifyClientDialog.value = true;
+      modifyItemDialog.value = true;
     }
-  
-    const deleteUser = (item: any) => {
-      showDialog('Usuwanie użytkownika', `Czy na pewno chcesz usunąć użytkownika ${item.name}?`, 'Anuluj', 'Usuń', item);
+    
+    const deleteItem = (item: any) => {
+      selectedItem.value = item;
+      showDialog('Usuwanie', `Czy na pewno chcesz usunąć ${item.name}?`, 'Anuluj', 'Usuń', item);
     }
   
     async function deleteConfirmed() {
@@ -136,16 +128,15 @@
       actionInProgress.value = true;
       if(selectedItem.value){
         try{
-          await clientStore.deleteClient(selectedItem.value.id);
-          toast.success("Klient został usunięty");
-          dialogShow.value = false;
+          await projectStore.deleteProject(selectedItem.value.id);
+          toast.success("Projekt został usunięty");
+          
         }catch(e: any){
           console.error(e);
           toast.error("Wystąpił błąd podczas usuwania: " + e.response.data.message);
         }finally{
           actionInProgress.value = false;
           dialogShow.value = false;
-          dataFiltered.value = clientStore.clients;
         }
       }
     }
@@ -160,21 +151,22 @@
     }
 
 
+
     watch(filterDateFrom, async (newVal) => {
       if(newVal){
         newVal = newVal as Date;
         newVal.setHours(0, 0, 0, 0);
-        dataFiltered.value = clientStore.clients.filter((client: Client) => {
-          if(newVal && client.created_at){
+        dataFiltered.value = projectStore.projects.filter((project: Project) => {
+          if(newVal && project.created_at){
             if(filterDateTo.value){
-              return new Date(client.created_at) >= newVal && new Date(client.created_at) <= filterDateTo.value;
+              return new Date(project.created_at) >= newVal && new Date(project.created_at) <= filterDateTo.value;
             }
-            return new Date(client.created_at) >= newVal;
+            return new Date(project.created_at) >= newVal;
           }
           return true;
         });
       }else{
-        dataFiltered.value = clientStore.clients;
+        dataFiltered.value = projectStore.projects;
       }
     })
 
@@ -182,30 +174,27 @@
       if(newVal){
         newVal = newVal as Date;
         newVal.setHours(23, 59, 59, 999);
-        dataFiltered.value = clientStore.clients.filter((client: Client) => {
-          if(newVal && client.created_at){
+        dataFiltered.value = projectStore.projects.filter((project: Project) => {
+          if(newVal && project.created_at){
             if(filterDateFrom.value){
-              return new Date(client.created_at) <= newVal && new Date(client.created_at) >= filterDateFrom.value;
+              return new Date(project.created_at) <= newVal && new Date(project.created_at) >= filterDateFrom.value;
             }
-            return new Date(client.created_at) <= newVal;
+            return new Date(project.created_at) <= newVal;
           }
           return true;
         });
       }else{
-        dataFiltered.value = clientStore.clients;
+        dataFiltered.value = projectStore.projects;
       }
     })
-  onMounted(() => {
-    getItems();
-  })
+
+    onMounted(() => {
+      getItems();
+    })
   </script>
   
   <style scoped style="scss">
-  .clientsview__actionbutton {
+  .itemsview__actionbutton {
     margin-right: 5px;
-  }
-
-  .clientsview__logoimage {
-    cursor: pointer;
   }
   </style>

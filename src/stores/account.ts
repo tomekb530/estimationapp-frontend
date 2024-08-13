@@ -16,7 +16,7 @@ export const useAccountStore = defineStore('account', () => {
 
     async function login(email: string, password: string) {
         await get("/sanctum/csrf-cookie")
-        const response = await post("/login", {
+        await post("/login", {
             email,
             password
         })
@@ -48,10 +48,15 @@ export const useAccountStore = defineStore('account', () => {
         })
     }
 
+    async function verifyEmail(verifyLink: string) {
+        await get("/sanctum/csrf-cookie");
+        await get(verifyLink);
+    }
+
     async function logout() {
         await post("/logout",{})
         userData.value = undefined;
     }
 
-    return { userData, isAuthenticated, login, logout, register, checkAuth, forgotPassword, resetPassword}
+    return { userData, isAuthenticated, login, logout, register, checkAuth, forgotPassword, resetPassword, verifyEmail}
 })

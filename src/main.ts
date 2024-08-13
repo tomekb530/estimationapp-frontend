@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import * as labsComponents from 'vuetify/labs/components'
 import 'vuetify/styles'
 import App from './App.vue'
 import router from './router'
@@ -14,7 +15,11 @@ import { useAccountStore } from './stores/account'
 
 const app = createApp(App)
 const vuetify = createVuetify({
-    components, directives, 
+    components: {
+        ...components,
+        ...labsComponents,
+      },
+    directives, 
     theme:{
         defaultTheme: 'dark'
     },
